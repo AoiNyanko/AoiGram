@@ -37,6 +37,9 @@ public class Extra {
     }
 
     public static UserHelper.BotInfo getHelperBot() {
+        if (BuildConfig.HELPER_BOT_USERNAME == null) {
+            return null;
+        }
         return HELPER_BOT;
     }
 
