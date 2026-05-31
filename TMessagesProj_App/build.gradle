@@ -20,6 +20,27 @@ sentry {
     ignoredBuildTypes = ["debug"]
 }
 
+def hasSentryUploadConfig = {
+    def sentryProperties = new Properties()
+    [rootProject.file("sentry.properties"), project.file("sentry.properties")].each { file ->
+        if (file.exists()) {
+            file.withInputStream { sentryProperties.load(it) }
+        }
+    }
+    def env = System.getenv()
+    def authToken = env["SENTRY_AUTH_TOKEN"] ?: sentryProperties.getProperty("auth.token")
+    def org = env["SENTRY_ORG"] ?: sentryProperties.getProperty("defaults.org")
+    def projectName = env["SENTRY_PROJECT"] ?: sentryProperties.getProperty("defaults.project")
+    return authToken && org && projectName
+}
+
+def sentryUploadsEnabled = hasSentryUploadConfig()
+tasks.configureEach { task ->
+    if (!sentryUploadsEnabled && (task.name.startsWith("uploadSentry") || task.name.startsWith("sentryBundleSources"))) {
+        task.enabled = false
+    }
+}
+
 android {
     defaultConfig.applicationId = APP_PACKAGE
 
