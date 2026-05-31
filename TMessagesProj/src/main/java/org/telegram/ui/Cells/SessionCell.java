@@ -51,6 +51,8 @@ import org.telegram.ui.Components.DotDividerSpan;
 import org.telegram.ui.Components.FlickerLoadingView;
 import org.telegram.ui.Components.LayoutHelper;
 
+import java.util.Locale;
+
 public class SessionCell extends FrameLayout {
 
     private int currentType;
@@ -296,6 +298,14 @@ public class SessionCell extends FrameLayout {
         return createDrawable(sz, auth);
     }
 
+    public static boolean isNekoClient(TLRPC.TL_authorization session) {
+        if (session == null || session.app_name == null) {
+            return false;
+        }
+        String appName = session.app_name.toLowerCase(Locale.ROOT).replace(" ", "");
+        return appName.contains("nekogram") || appName.contains("aoigram");
+    }
+
     public static CombinedDrawable createDrawable(int sz, TLRPC.TL_authorization session) {
         String platform = session.platform.toLowerCase();
         if (platform.isEmpty()) {
@@ -340,7 +350,7 @@ public class SessionCell extends FrameLayout {
             iconId = R.drawable.device_desktop_osx;
             colorKey = Theme.key_avatar_backgroundCyan;
             colorKey2 = Theme.key_avatar_background2Cyan;
-        } else if (session.app_name.contains("Nekogram")) {
+        } else if (isNekoClient(session)) {
             iconId = R.drawable.notification;
             colorKey = Theme.key_avatar_backgroundBlue;
             colorKey2 = Theme.key_avatar_background2Blue;

@@ -36,6 +36,7 @@ import org.telegram.ui.Components.BulletinFactory;
 import org.telegram.ui.Components.LayoutHelper;
 import org.telegram.ui.Components.RLottieImageView;
 import org.telegram.ui.Components.Switch;
+import org.telegram.ui.Cells.SessionCell;
 
 public class SessionBottomSheet extends BottomSheet {
 
@@ -366,7 +367,7 @@ public class SessionBottomSheet extends BottomSheet {
             iconId = R.raw.mac_30;
             colorKey = Theme.key_avatar_backgroundCyan;
             colorKey2 = Theme.key_avatar_background2Cyan;
-        } else if (session.app_name.contains("Nekogram")) {
+        } else if (SessionCell.isNekoClient(session)) {
             animation = false;
             iconId = R.drawable.notification;
             colorKey = Theme.key_avatar_backgroundBlue;
