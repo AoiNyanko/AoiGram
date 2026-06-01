@@ -104,6 +104,8 @@ android {
     if (project.rootProject.file('local.properties').exists()) {
         localProperties.load(project.rootProject.file('local.properties').newDataInputStream())
     }
+    def enableMeowCnLanguageSuggestion = localProperties.getProperty("enableMeowCnLanguageSuggestion", "true").toBoolean()
+    def enableMeowCnLanguageFallbackSuggestion = localProperties.getProperty("enableMeowCnLanguageFallbackSuggestion", "false").toBoolean()
 
     buildTypes {
         debug {
@@ -121,6 +123,8 @@ android {
             buildConfigField("String","SENTRY_DSN", "\"${localProperties.get("sentryDsn")}\"")
             buildConfigField("long","HELPER_BOT_ID", "${localProperties.get("helperBotId", 0)}")
             buildConfigField("String","HELPER_BOT_USERNAME", "\"${localProperties.get("helperBotUsername")}\"")
+            buildConfigField("boolean", "ENABLE_MEOWCN_LANGUAGE_SUGGESTION", "${enableMeowCnLanguageSuggestion}")
+            buildConfigField("boolean", "ENABLE_MEOWCN_LANGUAGE_FALLBACK_SUGGESTION", "${enableMeowCnLanguageFallbackSuggestion}")
         }
 
         release {
@@ -138,6 +142,8 @@ android {
             buildConfigField("String","SENTRY_DSN", "\"${localProperties.get("sentryDsn")}\"")
             buildConfigField("long","HELPER_BOT_ID", "${localProperties.get("helperBotId", 0)}")
             buildConfigField("String","HELPER_BOT_USERNAME", "\"${localProperties.get("helperBotUsername")}\"")
+            buildConfigField("boolean", "ENABLE_MEOWCN_LANGUAGE_SUGGESTION", "${enableMeowCnLanguageSuggestion}")
+            buildConfigField("boolean", "ENABLE_MEOWCN_LANGUAGE_FALLBACK_SUGGESTION", "${enableMeowCnLanguageFallbackSuggestion}")
         }
     }
     namespace 'org.telegram.messenger'

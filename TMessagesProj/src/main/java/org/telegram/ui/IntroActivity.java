@@ -18,6 +18,7 @@ import android.app.Activity;
 import android.content.Context;
 import android.content.SharedPreferences;
 import android.content.pm.ActivityInfo;
+import android.content.res.Configuration;
 import android.database.DataSetObserver;
 import android.graphics.Bitmap;
 import android.graphics.Canvas;
@@ -32,8 +33,10 @@ import android.graphics.drawable.Drawable;
 import android.graphics.drawable.GradientDrawable;
 import android.opengl.GLES20;
 import android.opengl.GLUtils;
+import android.os.Build;
 import android.os.Looper;
 import android.os.Parcelable;
+import android.telephony.TelephonyManager;
 import android.text.SpannableStringBuilder;
 import android.text.Spanned;
 import android.text.style.ImageSpan;
@@ -55,6 +58,7 @@ import androidx.viewpager.widget.ViewPager;
 
 import org.telegram.messenger.AndroidUtilities;
 import org.telegram.messenger.ApplicationLoader;
+import org.telegram.messenger.BuildConfig;
 import org.telegram.messenger.BuildVars;
 import org.telegram.messenger.DispatchQueue;
 import org.telegram.messenger.EmuDetector;
@@ -83,6 +87,7 @@ import org.telegram.ui.Components.SimpleThemeDescription;
 import org.telegram.ui.Components.voip.CellFlickerDrawable;
 
 import java.util.ArrayList;
+import java.util.Locale;
 
 import javax.microedition.khronos.egl.EGL10;
 import javax.microedition.khronos.egl.EGLConfig;
@@ -93,6 +98,7 @@ import javax.microedition.khronos.opengles.GL10;
 
 public class IntroActivity extends BaseFragment implements NotificationCenter.NotificationCenterDelegate {
     private final static int ICON_WIDTH_DP = 200, ICON_HEIGHT_DP = 150;
+    private final static String MEOWCN_LANG_CODE = "meowcn";
 
     private final Object pagerHeaderTag = new Object(),
             pagerMessageTag = new Object();
@@ -490,26 +496,40 @@ public class IntroActivity extends BaseFragment implements NotificationCenter.No
         LocaleController.LocaleInfo englishInfo = null;
         LocaleController.LocaleInfo systemInfo = null;
         LocaleController.LocaleInfo currentLocaleInfo = LocaleController.getInstance().getCurrentLocaleInfo();
-        String systemLang = MessagesController.getInstance(currentAccount).suggestedLangCode;
-        if (systemLang == null || systemLang.equals("en") && LocaleController.getInstance().getSystemDefaultLocale().getLanguage() != null && !LocaleController.getInstance().getSystemDefaultLocale().getLanguage().equals("en")) {
-            systemLang = LocaleController.getInstance().getSystemDefaultLocale().getLanguage();
-            if (systemLang == null) {
-                systemLang = "en";
-            }
+        String suggestedLang = MessagesController.getInstance(currentAccount).suggestedLangCode;
+        String systemLang = suggestedLang;
+        boolean suggestMeowCn = false;
+        if (BuildConfig.ENABLE_MEOWCN_LANGUAGE_SUGGESTION && shouldSuggestMeowCn(suggestedLang)) {
+            suggestMeowCn = true;
+        } else if (BuildConfig.ENABLE_MEOWCN_LANGUAGE_FALLBACK_SUGGESTION && shouldFallbackSuggestMeowCn()) {
+            suggestMeowCn = true;
         }
 
-        String arg = systemLang.contains("-") ? systemLang.split("-")[0] : systemLang;
-        String alias = LocaleController.getLocaleAlias(arg);
-        for (int a = 0; a < LocaleController.getInstance().languages.size(); a++) {
-            LocaleController.LocaleInfo info = LocaleController.getInstance().languages.get(a);
-            if (info.shortName.equals("en")) {
-                englishInfo = info;
+        if (suggestMeowCn) {
+            systemLang = MEOWCN_LANG_CODE;
+            englishInfo = findLocaleInfo("en");
+            systemInfo = getMeowCnLocaleInfo();
+        } else {
+            if (systemLang == null || systemLang.equals("en") && LocaleController.getInstance().getSystemDefaultLocale().getLanguage() != null && !LocaleController.getInstance().getSystemDefaultLocale().getLanguage().equals("en")) {
+                systemLang = LocaleController.getInstance().getSystemDefaultLocale().getLanguage();
+                if (systemLang == null) {
+                    systemLang = "en";
+                }
             }
-            if (info.shortName.replace("_", "-").equals(systemLang) || info.shortName.equals(arg) || info.shortName.equals(alias)) {
-                systemInfo = info;
-            }
-            if (englishInfo != null && systemInfo != null) {
-                break;
+
+            String arg = systemLang.contains("-") ? systemLang.split("-")[0] : systemLang;
+            String alias = LocaleController.getLocaleAlias(arg);
+            for (int a = 0; a < LocaleController.getInstance().languages.size(); a++) {
+                LocaleController.LocaleInfo info = LocaleController.getInstance().languages.get(a);
+                if (info.shortName.equals("en")) {
+                    englishInfo = info;
+                }
+                if (info.shortName.replace("_", "-").equals(systemLang) || info.shortName.equals(arg) || info.shortName.equals(alias)) {
+                    systemInfo = info;
+                }
+                if (englishInfo != null && systemInfo != null) {
+                    break;
+                }
             }
         }
         if (englishInfo == null || systemInfo == null || englishInfo == systemInfo) {
@@ -543,6 +563,77 @@ public class IntroActivity extends BaseFragment implements NotificationCenter.No
                 }
             }
         }, ConnectionsManager.RequestFlagWithoutLogin);
+    }
+
+    private boolean shouldSuggestMeowCn(String suggestedLang) {
+        if (suggestedLang == null) {
+            return false;
+        }
+        String normalized = suggestedLang.replace('_', '-').toLowerCase(Locale.ROOT);
+        return normalized.equals("zh-hans-beta") || normalized.equals("zh-hans-raw") || normalized.equals("zh-hans");
+    }
+
+    private LocaleController.LocaleInfo findLocaleInfo(String langCode) {
+        String normalized = langCode.replace('_', '-').toLowerCase(Locale.ROOT);
+        for (int a = 0; a < LocaleController.getInstance().languages.size(); a++) {
+            LocaleController.LocaleInfo info = LocaleController.getInstance().languages.get(a);
+            if (info.shortName != null && info.shortName.replace("_", "-").equals(normalized)) {
+                return info;
+            }
+        }
+        return null;
+    }
+
+    private LocaleController.LocaleInfo getMeowCnLocaleInfo() {
+        LocaleController.LocaleInfo existing = findLocaleInfo(MEOWCN_LANG_CODE);
+        if (existing != null) {
+            return existing;
+        }
+        LocaleController.LocaleInfo localeInfo = new LocaleController.LocaleInfo();
+        localeInfo.name = "Meow Chinese";
+        localeInfo.nameEnglish = "Meow Chinese";
+        localeInfo.shortName = MEOWCN_LANG_CODE;
+        localeInfo.pathToFile = "remote";
+        localeInfo.pluralLangCode = "zh";
+        localeInfo.serverIndex = Integer.MAX_VALUE;
+        return localeInfo;
+    }
+
+    private boolean shouldFallbackSuggestMeowCn() {
+        return hasChineseMobileCountryCode() || hasSimplifiedChineseSystemLanguage();
+    }
+
+    private boolean hasChineseMobileCountryCode() {
+        Configuration configuration = ApplicationLoader.applicationContext.getResources().getConfiguration();
+        if (configuration != null && configuration.mcc == 460) {
+            return true;
+        }
+        try {
+            TelephonyManager telephonyManager = (TelephonyManager) ApplicationLoader.applicationContext.getSystemService(Context.TELEPHONY_SERVICE);
+            return telephonyManager != null && (hasChineseMobileCountryCode(telephonyManager.getSimOperator()) || hasChineseMobileCountryCode(telephonyManager.getNetworkOperator()));
+        } catch (Exception e) {
+            FileLog.e(e);
+        }
+        return false;
+    }
+
+    private boolean hasChineseMobileCountryCode(String operator) {
+        return operator != null && operator.startsWith("460");
+    }
+
+    private boolean hasSimplifiedChineseSystemLanguage() {
+        Configuration configuration = android.content.res.Resources.getSystem().getConfiguration();
+        Locale locale;
+        if (Build.VERSION.SDK_INT >= 24) {
+            locale = configuration.getLocales().isEmpty() ? null : configuration.getLocales().get(0);
+        } else {
+            locale = configuration.locale;
+        }
+        if (locale == null) {
+            return false;
+        }
+        String tag = locale.toLanguageTag().replace('_', '-').toLowerCase(Locale.ROOT);
+        return tag.equals("zh-cn") || tag.startsWith("zh-hans");
     }
 
     @Override
