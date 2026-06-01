@@ -10,6 +10,16 @@ dependencies {
     implementation project(':TMessagesProj')
 }
 
+def aoigramAppPackage = "com.aoinyanko.aoigram"
+def aoigramBuildTasks = [
+        "aoigram-release": "assembleRelease",
+        "aoigram-debug"  : "assembleDebug",
+        "aoigram-play"   : "assemblePlay",
+]
+def requestedTaskNames = gradle.startParameter.taskNames.collect { it.tokenize(':').last() }
+def useAoigramAppPackage = requestedTaskNames.any { aoigramBuildTasks.containsKey(it) }
+def appPackage = useAoigramAppPackage ? aoigramAppPackage : APP_PACKAGE
+
 sentry {
     uploadNativeSymbols = true
     includeSourceContext = true
@@ -42,7 +52,7 @@ tasks.configureEach { task ->
 }
 
 android {
-    defaultConfig.applicationId = APP_PACKAGE
+    defaultConfig.applicationId = appPackage
 
     packagingOptions {
         resources {
@@ -117,6 +127,14 @@ android {
     dependenciesInfo {
         includeInApk false
         includeInBundle false
+    }
+}
+
+aoigramBuildTasks.each { taskName, assembleTaskName ->
+    tasks.register(taskName) {
+        group = "build"
+        description = "Builds ${assembleTaskName - 'assemble'} with ${aoigramAppPackage} as the base applicationId."
+        dependsOn assembleTaskName
     }
 }
 

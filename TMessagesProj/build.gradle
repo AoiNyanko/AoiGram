@@ -106,6 +106,10 @@ android {
     }
     def enableMeowCnLanguageSuggestion = localProperties.getProperty("enableMeowCnLanguageSuggestion", "true").toBoolean()
     def enableMeowCnLanguageFallbackSuggestion = localProperties.getProperty("enableMeowCnLanguageFallbackSuggestion", "false").toBoolean()
+    def aoigramAppPackage = "com.aoinyanko.aoigram"
+    def aoigramBuildTasks = ["aoigram-release", "aoigram-debug", "aoigram-play"]
+    def requestedTaskNames = gradle.startParameter.taskNames.collect { it.tokenize(':').last() }
+    def appPackage = requestedTaskNames.any { aoigramBuildTasks.contains(it) } ? aoigramAppPackage : APP_PACKAGE
 
     buildTypes {
         debug {
@@ -157,7 +161,7 @@ android {
     defaultConfig {
         externalNativeBuild {
             cmake {
-                arguments '-DANDROID_STL=c++_static', '-DANDROID_PLATFORM=android-23', '-DANDROID_SUPPORT_FLEXIBLE_PAGE_SIZES=ON'
+                arguments '-DANDROID_STL=c++_static', '-DANDROID_PLATFORM=android-23', '-DANDROID_SUPPORT_FLEXIBLE_PAGE_SIZES=ON', "-DCOLORADO_PACKAGE_NAME=${appPackage}"
                 System.getenv("PATH").split(File.pathSeparator).any { path ->
                     var file = Paths.get("${path}${File.separator}ccache${if (OperatingSystem.current().windows) ".exe" else ""}").toFile()
                     if (file.exists()) {
